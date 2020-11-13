@@ -85,7 +85,7 @@ function check_divrege(Qbase, cellxmax, cellymax, Rhat, fwrite)
                     aj = @sprintf("%4.0f", j)
 
                     write(f, "\n")
-                    write(f, " diverge ")
+                    write(f, " thermal diverge ")
                     write(f, "\n")
                     write(f, " i = "*ai)
                     write(f, "\n")
@@ -93,15 +93,35 @@ function check_divrege(Qbase, cellxmax, cellymax, Rhat, fwrite)
                     write(f, "\n")
                 end
                 ite = 1
+            end            
+            if 1 < Qbase[i,j,5] || Qbase[i,j,5] < 0
+                open( fwrite, "a" ) do f
+                    ai = @sprintf("%4.0f", i)
+                    aj = @sprintf("%4.0f", j)
+
+                    write(f, "\n")
+                    write(f, " chemical diverge ")
+                    write(f, "\n")
+                    write(f, " i = "*ai)
+                    write(f, "\n")
+                    write(f, " j = "*aj)
+                    write(f, "\n")
+                end
+                ite = 2
             end
         end
     end
 
     if ite == 1
         println("\n")
+        println(" T < 0 or T = NaN ")
+        println(" thermal diverge ")
         println("\n")
-        println(" T<0 ")
-        println(" diverge ")
+        throw(UndefVarError(:x))
+    elseif ite == 2
+        println("\n")
+        println(" N > 1 or N < 0 ")
+        println(" chemical diverge ")
         println("\n")
         throw(UndefVarError(:x))
     end

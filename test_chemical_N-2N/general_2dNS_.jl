@@ -1,6 +1,6 @@
 # src path
 #src_path = "C:\\Users\\hidee\\OneDrive\\デスクトップ\\git\\test_chemical_N-2N\\2d_general\\src\\"
-src_path = "C:\\Users\\Koike\\Desktop\\git\\test_chemical_N-2N\\2d_general\\src\\"
+src_path = "C:\\Users\\Koike\\Desktop\\git\\test\\test_chemical_N-2N\\src\\"
 
 # main (変更しないこと)
 src_read="read_grid.jl"

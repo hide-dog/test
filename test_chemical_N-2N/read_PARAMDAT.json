@@ -17,16 +17,16 @@
 "time_integ":"1",      
 "nt":"1.0e4",          
 "dt":"1.0e-6",       
-"every_outnum":"1.0e3",      
+"every_outnum":"5.0e2",      
 "inner_step":"10",       
 "dtau":"1.0e-2",       
 
 
-"init_rho":"1.e-1",     
-"init_u":"1000.0",       
+"init_rho":"1.0e0",     
+"init_u":"500.0",       
 "init_v":"0.0",       
-"init_p":"1.0e1",      
-"init_T":"199.0",
+"init_p":"370.6",      
+"init_T":"300.0",      
 "init_pt":"1",
 "init_N2":"1.0",    
 "init_N":"0.0",       
@@ -73,13 +73,13 @@
 "bd3_T":"300.0",
 
 "bd4_con":"6",
-"bd4_rho":"1.0e-1",
-"bd4_u":"1000.0",
+"bd4_rho":"1.2e0",
+"bd4_u":"3000.0",
 "bd4_v":"0.0",
 "bd4_p":"1.0e5",   
 "bd4_N2":"1.0",
 "bd4_N":"0.0",
-"bd4_T":"250.0",
+"bd4_T":"300.0",
 
 "blank":"blank"
 }

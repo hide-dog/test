@@ -206,21 +206,7 @@ function main()
             output_result(evalnum, Qbase, cellxmax, cellymax, specific_heat_ratio, out_file_front, out_ext, out_dir, Rhat, nval)
         end
 
-        check_divrege(Qbase, cellxmax, cellymax, Rhat, fwrite)
-
-        
-        for i in 1:cellxmax
-            for j in 1:cellymax
-                if 1 < Qbase[i,j,5] || Qbase[i,j,5] < 0
-                    println("  vv ")
-                    println(i)
-                    println(j)
-                    println(wdot[i,j,:])
-                    throw(UndefVarError(:x))
-                end
-            end
-        end
-        
+        check_divrege(Qbase, cellxmax, cellymax, Rhat, fwrite)    
 
     end
 end

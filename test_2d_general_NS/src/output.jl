@@ -59,7 +59,7 @@ end
 
 function output_fin(fwrite, start_t, end_t, nt, dt, in_nt, cellxmax, cellymax)
     
-    etime = end_time - start_time     # 経過時間
+    etime = end_t - start_t     # 経過時間
     outtime = ["temp"]
     outtime[1] = string(etime)        # 文字列への変換
 
@@ -91,7 +91,7 @@ function output_fin(fwrite, start_t, end_t, nt, dt, in_nt, cellxmax, cellymax)
         write(f, "\n")
         write(f, "  number of cell            = " * numcell)
         write(f, "\n")
-        write(f, "  number of cell            = " * dt)
+        write(f, "  dt                        = " * dt)
         write(f, "\n")
         write(f, "  number of time iteration  = " * nt)
         write(f, "\n")

@@ -1,4 +1,4 @@
-function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rd, nval)
+function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rd, g, nval)
     """bdcon[i][j]
         i : 境界番号(x-,x+ ,y-,y+)
         j=1-6 : "bd1_con":"2",
@@ -149,6 +149,22 @@ function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rd, nval)
                 Qbase[i,1,l] = Qbase[i,cellymax-1,l]
             end 
         end
+    elseif Int(bdcon[3][1]) == 7
+        for i in 1:cellxmax
+            for l in 1:nval
+                Qbase[i,1,l] = Qbase[i,2,l]
+            end
+
+            u = Qbase[i,2,2]
+            v = Qbase[i,2,3]
+
+            Qbase[i,1,2] = -u
+            Qbase[i,1,3] = -v
+
+            Tw = bdcon[3][nval+2]
+            p  = Qbase[i,1,4]
+            Qbase[i,1,1] = g*p/Tw
+        end
     end
 
     # bd4 = y+
@@ -249,6 +265,7 @@ function check_bd(bdcon)
         elseif Int(bdcon[l][1]) == 4
         elseif Int(bdcon[l][1]) == 5
         elseif Int(bdcon[l][1]) == 6
+        elseif Int(bdcon[l][1]) == 7
         else
             println("\n check boundary condition ! \n")
             throw(UndefVarError(:x))

@@ -44,7 +44,7 @@ function main()
         if time_integ == "1"
             # exlicit scheme
             
-            Qbase    = set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rd, nval)
+            Qbase    = set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rd, specific_heat_ratio, nval)
             Qcon     = base_to_conservative(Qbase, cellxmax, cellymax, specific_heat_ratio, nval)
             Qcon_hat = setup_Qcon_hat(Qcon, cellxmax, cellymax, volume, nval)
             
@@ -80,7 +80,7 @@ function main()
 
             for tau in 1:in_nt
                 # LHS (A_adv_hat=jacobian)
-                Qbasem = set_boundary(Qbasem, cellxmax, cellymax, vecAx, vecAy, bdcon, Rd, nval)
+                Qbasem = set_boundary(Qbasem, cellxmax, cellymax, vecAx, vecAy, bdcon, Rd, specific_heat_ratio, nval)
                 
                 Qcon     = base_to_conservative(Qbasem, cellxmax, cellymax, specific_heat_ratio, nval)
                 Qcon_hat = setup_Qcon_hat(Qcon, cellxmax, cellymax, volume, nval)

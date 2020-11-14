@@ -93,18 +93,14 @@ function freaction_rate(Tfr, nreaction)
     kf = zeros(nreaction)
 
     # N2+N2 -> 2N+N2
-    Cr = 7.0*10^(21)
-    sr = -1.60
-    tr = 113200
-
-    kf[1] = reaction_rate_arrhcnius(Tfr, Cr, sr, tr)
-
     # N2+N  -> 2N+N
-    Cr = 3.0*10^(22)
-    sr = -1.60
-    tr = 113200
+    Cr = [7.0*10^(21), 3.0*10^(22)]
+    sr = [-1.60, -1.60]
+    tr = [113200, 113200]
 
-    kf[2] = reaction_rate_arrhcnius(Tfr, Cr, sr, tr)
+    for r in 1:nreaction
+        kf[r] = reaction_rate_arrhcnius(Tfr, Cr[r], sr[r], tr[r])
+    end
 
     return kf
 end
@@ -184,13 +180,13 @@ end
 
 function chemical_enthalpy(T)
     # 複数の温度モードを考慮した方がよい
-    delta_hs_0 = [0.0, 3.364e7]  # N2,N[J/kg]
-    mw  = [28e-3, 14e-3]          # [kg/mol]
-    R   = 8.314                   # [J/K/mol]
+    delta_hs_0 = set_delta_hs_0()
+    mw  = set_mw()
+    R   = set_gas_const()
     nch = length(delta_hs_0)
 
-    num_molecule = 1             # 二原子分子の数
-    theta_vib = [3.353]
+    theta_vib = set_thermal_vib()
+    num_molecule = length(theta_vib)     # 二原子分子の数
 
     Rs = zeros(nch)              # 化学種気体定数
     for s in 1:nch
@@ -210,4 +206,53 @@ function chemical_enthalpy(T)
     end
 
     return hs
+end
+
+function set_delta_hs_0()
+    # N2, N
+    delta_hs_0 = [0.0, 3.364e7]   # [J/kg]
+    return delta_hs_0
+end
+
+function set_mw()
+    # N2, N
+    mw  = [28e-3, 14e-3]          # [kg/mol]
+    return mw
+end
+
+function set_gas_const()
+    R   = 8.314                   # [J/K/mol]
+    return R
+end
+
+function set_thermal_vib()
+    # N2
+    theta_vib = [3.353]
+    return theta_vib
+end
+
+function set_fmol()
+    # N2 + N2 --> N + N + N2
+    # N2 + N  --> N + N + N
+    fmol = [[2, 0],
+            [1, 1]]
+    return fmol
+end
+
+function set_bmol()
+    # N2 + N2 <-- N + N + N2
+    # N2 + N  <-- N + N + N
+    bmol = [[1, 2],
+            [0, 3]]
+    return bmol
+end
+
+function set_avgdro_const()
+    avgdro  = 6.022*10^23    # アボガドロ定数
+    return avgdro
+end
+
+function set_boltzmann_const()
+    kb = 1.380/10^(23)       # ボルツマン定数
+    return kb
 end

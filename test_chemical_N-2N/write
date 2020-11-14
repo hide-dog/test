@@ -1,8 +1,10 @@
 
- chemical diverge 
- i =   99
- j =   14
 
- chemical diverge 
- i =  104
- j =   14
+---------------------------- 
+  fin program  
+  number of cell            = 40804
+  dt                        = 1.0e-6
+  number of time iteration  = 100
+  number of inner iteration = 10
+  elapse time (hh:mm:ss)    = 00:00:38
+---------------------------- 

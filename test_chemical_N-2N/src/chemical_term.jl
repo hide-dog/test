@@ -3,17 +3,11 @@ function set_wdot(Qbase, cellxmax, cellymax, Rhat, nch, nre, nval)
     wdot = zeros(cellxmax, cellymax, nval)
     npre = nval - nch
 
-    mw_N2_N = [28e-3, 14e-3]
-    avgdro  = 6.022*10^23
-
-    # N2 + N2 --> N + N + N2
-    # N2 + N  --> N + N + N
-    fmol = [[2, 0],
-            [1, 1]]
-    # N2 + N2 <-- N + N + N2
-    # N2 + N  <-- N + N + N
-    bmol = [[1, 2],
-            [0, 3]]
+    mw = set_mw()
+    avgdro  = set_avgdro_const()
+    
+    fmol = set_fmol()
+    bmol = set_bmol()
 
     for i in 2:cellxmax-1
         for j in 2:cellymax-1
@@ -22,7 +16,7 @@ function set_wdot(Qbase, cellxmax, cellymax, Rhat, nch, nre, nval)
             total = 0.0
             rho_mw = zeros(nch)
             for s in 1:nch
-                rho_mw[s] = Qbase[i,j,npre+s] / mw_N2_N[s]   # [mol/m3] = [kg/m3] / [kg/mol] 
+                rho_mw[s] = Qbase[i,j,npre+s] / mw[s]   # [mol/m3] = [kg/m3] / [kg/mol] 
                 total     = total + rho_mw[s]
             end
             total = log10(total*avgdro)
@@ -65,7 +59,7 @@ function set_wdot(Qbase, cellxmax, cellymax, Rhat, nch, nre, nval)
                     temp = (bmol[r][s] - fmol[r][s])*(lf[r] - lb[r])
                     wdot[i,j,npre+s] += temp 
                 end
-                wdot[i,j,npre+s] = 1.0e6 * wdot[i,j,npre+s] * mw_N2_N[s]
+                wdot[i,j,npre+s] = 1.0e6 * wdot[i,j,npre+s] * mw[s]
             end
         end
     end
@@ -77,16 +71,16 @@ function chemical_value(Qbase, cellxmax, cellymax, Rhat, nval, nch)
     chmu        = zeros(cellxmax, cellymax)
     chlambda_tr = zeros(cellxmax, cellymax)
     chD         = zeros(cellxmax, cellymax, nch)
-    chi         = zeros(cellxmax, cellymax, nch)
+    chmolef         = zeros(cellxmax, cellymax, nch)
     # N2 - N2
     # N2 - N
     # N  - N
     num_nncross = binomial(BigInt(2*nch-1), BigInt(nch)) # 重複組み合わせ nHr = n+r-1Cr
     npre = nval - nch
 
-    mw = [28.0e-3, 14.0e-3]  # 原子量[kg/mol]
-    avgdro  = 6.022*10^23    # アボガドロ定数
-    kb = 1.380/10^(23)      # ボルツマン定数
+    mw = set_mw()  # 原子量[kg/mol]
+    avgdro  = set_avgdro_const()    # アボガドロ定数
+    kb = set_boltzmann_const()      # ボルツマン定数
     pi = 3.1415              # pi
 
     ms = zeros(nch)          # 原子一個当たりの質量[kg]
@@ -102,7 +96,7 @@ function chemical_value(Qbase, cellxmax, cellymax, Rhat, nval, nch)
                 total += Qbase[i,j,npre+s]/mw[s]
             end
             for s in 1:nch
-                chi[i,j,s] = (Qbase[i,j,npre+s]/mw[s]) /total
+                chmolef[i,j,s] = (Qbase[i,j,npre+s]/mw[s]) /total
             end
 
             T = Qbase[i,j,npre]/(Qbase[i,j,1]*Rhat[i,j])
@@ -134,9 +128,9 @@ function chemical_value(Qbase, cellxmax, cellymax, Rhat, nval, nch)
             temp      = 0.0
             for si in 1:nch
                 for sj in 1:nch
-                    temp += chi[i,j,sj] * deltaij2[si,sj]
+                    temp += chmolef[i,j,sj] * deltaij2[si,sj]
                 end
-                chmu[i,j] += ms[si]*chi[i,j,si]/temp
+                chmu[i,j] += ms[si]*chmolef[i,j,si]/temp
             end
 
 
@@ -145,9 +139,9 @@ function chemical_value(Qbase, cellxmax, cellymax, Rhat, nval, nch)
             for si in 1:nch
                 for sj in 1:nch
                     alphaij = 1 + (1-ms[si]/ms[sj]) * (0.45-2.54*ms[si]/ms[sj]) / (1+ms[si]/ms[sj])^2
-                    temp += alphaij * chi[i,j,sj] * deltaij2[si, sj]
+                    temp += alphaij * chmolef[i,j,sj] * deltaij2[si, sj]
                 end
-                chlambda_tr[i,j] += chi[i,j,si]/temp
+                chlambda_tr[i,j] += chmolef[i,j,si]/temp
             end
 
             # 対象の行と列を足して(si,si)を引く
@@ -171,21 +165,21 @@ function chemical_value(Qbase, cellxmax, cellymax, Rhat, nval, nch)
             for si in 1:nch
                 tempsum = 0
                 for sj in 1:nch
-                    tempsum += chi[i,j,sj]*inv_Dij[si,sj]
-                    tempsum += chi[i,j,sj]*inv_Dij[sj,si]
+                    tempsum += chmolef[i,j,sj]*inv_Dij[si,sj]
+                    tempsum += chmolef[i,j,sj]*inv_Dij[sj,si]
                 end
-                tempsum -= chi[i,j,si]*inv_Dij[si,si]*2
+                tempsum -= chmolef[i,j,si]*inv_Dij[si,si]*2
                 rho  = Qbase[i,j,1]
                 rhos = Qbase[i,j,npre+si]
                 Cs   = rhos / rho
-                if chi[i,j,si] == 0.0 || tempsum == 0.0
+                if chmolef[i,j,si] == 0.0 || tempsum == 0.0
                     chD[i,j,si] = 0.0
                 else
-                    chD[i,j,si] = (1-Cs)/tempsum * Cs/chi[i,j,si]
+                    chD[i,j,si] = (1-Cs)/tempsum * Cs/chmolef[i,j,si]
                 end
             end
         end
     end
 
-    return chmu, chlambda_tr, chD, chi
+    return chmu, chlambda_tr, chD, chmolef
 end

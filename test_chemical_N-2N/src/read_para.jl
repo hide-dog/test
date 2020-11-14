@@ -56,8 +56,8 @@ function read_para(dict)
     init_N2  = parse(Float64,dict["init_N2"])
     init_N   = parse(Float64,dict["init_N"])
     
-    mw   = [28e-3, 14e-3]
-    R    = 8.314
+    mw   = set_mw()
+    R    = set_gas_const()
     if init_pt == 1
         mav = init_N2 * mw[1] + init_N * mw[2]
         Rt  = R / mav

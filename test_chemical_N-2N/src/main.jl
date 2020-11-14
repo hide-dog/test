@@ -1,15 +1,18 @@
-    using ProgressMeter
+using ProgressMeter
+using Dates
 
 function main()
+    start_t = now()
+
     out_dir  = "result"
     PARAMDAT = "PARAMDAT.json"
     fwrite   = "write"
     
-    nch  = 2    # rho,u,v,p
-    nval = 6    # rho,u,v,p + N2, N
+    nval = 6    # rho,u,v,p, N2, N
+    nch  = 2    # N2, N
     nre  = 2    # N2+N2 -> 2N+N2
                 # N2+N  -> 2N+N
-    R    = 8.314
+    R    = set_gas_const()
 
     xmax, ymax, nodes, vecAx, vecAy = read_allgrid()
     out_file_front, out_ext, restartnum, restart_file, init_small, norm_ok,
@@ -22,6 +25,7 @@ function main()
     # init Delta_Qcon_hat
     volume = set_volume(nodes, cellxmax, cellymax)
     Minf   = set_Minf(bdcon, specific_heat_ratio)
+    dx, dy = set_dx_lts(nodes, cellxmax, cellymax)
     reset_write(fwrite)
     
     # main loop
@@ -41,82 +45,30 @@ function main()
         if time_integ == "1"
             # exlicit scheme
 
-            #println(Qbase[1,3,:])
             Rhat = set_gasconst(Qbase,cellxmax,cellymax,nval,nch,R)
 
-            Qbase    = set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval)
+            Qbase    = set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval, nch)
             Qcon     = base_to_conservative(Qbase, cellxmax, cellymax, specific_heat_ratio, nval, nch)
             Qcon_hat = setup_Qcon_hat(Qcon, cellxmax, cellymax, volume, nval, nch)
-            
+           
 
             # initial_setup
-            chmu, chlambda_tr, chD, chi = chemical_value(Qbase, cellxmax, cellymax, Rhat, nval, nch)
-
-            # mu     = set_mu(Qbase,cellxmax,cellymax,specific_heat_ratio,Rhat)
-            # lambda = set_lambda(Qbase,cellxmax,cellymax,mu,specific_heat_ratio,Rhat)
+            chmu, chlambda_tr, chD, chmolef = chemical_value(Qbase, cellxmax, cellymax, Rhat, nval, nch)
             
             # RHS
             # sorce term
             wdot = set_wdot(Qbase, cellxmax, cellymax, Rhat, nch, nre, nval)
-
-            #println(Qbase[1,3,:])
-            #println(Qcon[1,3,:])
-            # advection_term
             
+            # advection_term           
             #E_adv_hat, F_adv_hat = AUSM_plusup(Qbase, Qcon, cellxmax, cellymax, vecAx, vecAy, specific_heat_ratio, Minf, volume, nval)
             E_adv_hat, F_adv_hat = AUSM_plus(Qbase, Qcon, cellxmax, cellymax, vecAx, vecAy, specific_heat_ratio, volume, nval)
             
-            #println("AUSM")
-            
-            #println(Qcon[40,101,:])
-            #println(Qcon[40,102,:])
-            #println(E_adv_hat[2,10,:])
-            #println(E_adv_hat[35,3,:])
-            #println(F_adv_hat[2,100,:])
-            #println(wdot[2,2,:])
-            #println(F_adv_hat[35,3,:])
-            
-            #=
-            cell_Ahat_plas,cell_Ahat_minus,cell_Bhat_plas,cell_Bhat_minus = cal_jacobi(Qbase,Qcon,cellxmax,cellymax,specific_heat_ratio,vecAx,vecAy,volume)
-            cell_E_hat_plas,cell_E_hat_minus,cell_F_hat_plas,cell_F_hat_minus = setup_cell_flux_hat(Qcon,cellxmax,cellymax,cell_Ahat_plas,cell_Ahat_minus,cell_Bhat_plas,cell_Bhat_minus)
-            E_adv_hat,F_adv_hat = FVS(cell_E_hat_plas,cell_E_hat_minus,cell_F_hat_plas,cell_F_hat_minus,cellxmax,cellymax)
-            =#
-
-            #println("FVS")
-            #println(E_adv_hat[52,50,:])
-            #println(E_adv_hat[35,3,:])
-            #println(F_adv_hat[52,50,:])
-            #println(F_adv_hat[35,3,:])
-            
-            
             # viscos_term
-            E_vis_hat, F_vis_hat = central_diff(Qbase, Qcon, cellxmax, cellymax, chmu, chlambda_tr, chD, chi,
+            E_vis_hat, F_vis_hat = central_diff(Qbase, Qcon, cellxmax, cellymax, chmu, chlambda_tr, chD, chmolef,
                                                 vecAx, vecAy, specific_heat_ratio, volume, Rhat, nval, nch)
-            #E_vis_hat = zeros(cellxmax+1, cellymax+1, nval)
-            #F_vis_hat = zeros(cellxmax+1, cellymax+1, nval)
-
-            RHS = setup_RHS(cellxmax, cellymax, E_adv_hat, F_adv_hat, E_vis_hat, F_vis_hat, wdot, nval, volume)
-            #=
-            println(E_adv_hat[2,50,:])
-            println(F_adv_hat[2,50,:])
-            println(E_vis_hat[2,50,:])
-            println(F_vis_hat[2,50,:])
-            println(wdot[2,50,:])
-            println(RHS[2,50,:])
-            =#
             
-
-            #=
-            println("          ")
-            println(E_adv_hat[100,2,:])
-            println(F_adv_hat[100,2,:])
-            println(E_adv_hat[100,3,:])
-            println(F_adv_hat[100,3,:])
-            println(Qcon_hat[100,2,:])
-            println(RHS[100,2,:])
-            =#
-
-            #println(RHS[2,4,:])
+            RHS = setup_RHS(cellxmax, cellymax, E_adv_hat, F_adv_hat, E_vis_hat, F_vis_hat, wdot, nval, volume)
+            
             # time integral
             Qcon_hat = time_integration_explicit(dt, Qcon_hat, RHS, cellxmax, cellymax, nval)
 
@@ -134,12 +86,13 @@ function main()
                 # LHS (A_adv_hat=jacobian)
                 Rhat = set_gasconst(Qbasem,cellxmax,cellymax,nval,nch,R)
 
-                Qbasem   = set_boundary(Qbasem, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval)
+                Qbasem   = set_boundary(Qbasem, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval, nch)
                 Qcon     = base_to_conservative(Qbasem, cellxmax, cellymax, specific_heat_ratio, nval, nch)
                 Qcon_hat = setup_Qcon_hat(Qcon, cellxmax, cellymax, volume, nval, nch)
 
                 # initial_setup
-                chmu, chlambda_tr, chD, chi = chemical_value(Qbasem, cellxmax, cellymax, Rhat, nval, nch)
+                chmu, chlambda_tr, chD, chmolef = chemical_value(Qbasem, cellxmax, cellymax, Rhat, nval, nch)
+                dtau   = set_lts(Qbasem, cellxmax, cellymax, mu, dx, dy, vecAx, vecAy, volume, specific_heat_ratio, cfl)
 
                 # RHS
                 # sorce term
@@ -150,13 +103,10 @@ function main()
                 E_adv_hat, F_adv_hat = AUSM_plus(Qbasem, Qcon, cellxmax, cellymax, vecAx, vecAy, specific_heat_ratio, volume, nval)
 
                 # viscos_term
-                E_vis_hat, F_vis_hat = central_diff(Qbasem, Qcon, cellxmax, cellymax, chmu, chlambda_tr, chD, chi,
+                E_vis_hat, F_vis_hat = central_diff(Qbasem, Qcon, cellxmax, cellymax, chmu, chlambda_tr, chD, chmolef,
                                                 vecAx, vecAy, specific_heat_ratio, volume, Rhat, nval, nch)
 
                 RHS = setup_RHS(cellxmax, cellymax, E_adv_hat, F_adv_hat, E_vis_hat, F_vis_hat, wdot, nval, volume)
-
-
-
 
                 # lusgs_advection_term
                 A_adv_hat_p, A_adv_hat_m, B_adv_hat_p, B_adv_hat_m, A_beta_shig, B_beta_shig = 
@@ -169,6 +119,7 @@ function main()
                 delta_Q = zeros(cellxmax, cellymax, nval)
 
                 ite=0
+                norm2 = zeros(nval)
                 while true
                     delta_Q_temp = copy(delta_Q)
                     delta_Q = lusgs(dt,Qcon_hat,Qconn_hat,delta_Q,A_adv_hat_p, A_adv_hat_m, B_adv_hat_p, B_adv_hat_m, A_beta_shig, B_beta_shig,jalphaP, jbetaP,RHS,cellxmax,cellymax,volume)
@@ -181,9 +132,11 @@ function main()
                         break
                     end
                     if ite % 100 ==0
+                        println(" now cal norm2 ")
                         println(norm2)
                     end
                 end
+                output_innertime(fwrite, tau, norm2, nval)
                 
                 for i in 2:cellxmax-1
                     for j in 2:cellymax-1
@@ -206,9 +159,10 @@ function main()
             output_result(evalnum, Qbase, cellxmax, cellymax, specific_heat_ratio, out_file_front, out_ext, out_dir, Rhat, nval)
         end
 
-        check_divrege(Qbase, cellxmax, cellymax, Rhat, fwrite)    
-
+        check_divrege(Qbase, cellxmax, cellymax, Rhat, fwrite)
     end
+    end_t = now()
+    output_fin(fwrite, start_t, end_t, nt, dt, in_nt, cellxmax, cellymax)
 end
 
 # -- main --

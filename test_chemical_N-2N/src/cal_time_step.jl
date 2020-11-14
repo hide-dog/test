@@ -28,11 +28,11 @@ function one_wave(Qbase, Qcon, cellxmax, cellymax, vecAx, vecAy, specific_heat_r
             for k in 1:2 #A,B
                 jacob_temp = zeros(nval,nval)
                 if k == 1
-                    kx_av = 0.5*(vecAx[i,j,1]+vecAx[i+1,j,1])
-                    ky_av = 0.5*(vecAx[i,j,2]+vecAx[i+1,j,2])
+                    kx_av = 0.5*(vecAx[i,j,1]+vecAx[i+1,j,1]) / volume[i,j]
+                    ky_av = 0.5*(vecAx[i,j,2]+vecAx[i+1,j,2]) / volume[i,j]
                 elseif k == 2
-                    kx_av = 0.5*(vecAy[i,j,1]+vecAy[i,j+1,1])
-                    ky_av = 0.5*(vecAy[i,j,2]+vecAy[i,j+1,2])
+                    kx_av = 0.5*(vecAy[i,j,1]+vecAy[i,j+1,1]) / volume[i,j]
+                    ky_av = 0.5*(vecAy[i,j,2]+vecAy[i,j+1,2]) / volume[i,j]
                 end
 
                 rho = Qbase[i,j,1]

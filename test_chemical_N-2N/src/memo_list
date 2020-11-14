@@ -1,107 +1,153 @@
 
+
+
+
+          (2,3)        (3,3)
+            |------------|
+            |            |
+            |  cell 2    |
+vecE(2,2)-> |            | vecE(2,3)
+            |            |
+            |------------|
+     nodes(2,2)        (3,2)
+                  ↑ 
+          vecF(2,2), vecAy(2,2)
+
+
+
 --------------------------------------------
-nodes[i][j]
-i:接点番号
-j=0 : 点の番号
-j=1 : 点のx座標
-j=2 : 点のy座標
-j=3 : 点のz座標
+cell structure point, [m3]
+nodes[i][j][l]
+i:x
+j:y
+l=1:x coordinates
+l=2:y coordinates
 --------------------------------------------
 
 --------------------------------------------
-elements[i][j] (Int)
-i:cell番号
-j=0:接点番号1
-j=1:接点番号2
-j=2:接点番号3
-j=3:接点番号4
-[1 2 5 4] -> 一周するように設定
+area vector
+vecAx[i][j][l]
+i:x
+j:y
+l=1 :x coordinates
+l=2 :y coordinates
 --------------------------------------------
 
 --------------------------------------------
-ele_bdx[i][j] (Int)
-i:面番号（Axと一致）
-j=0:flux番号
-j=1:接点番号1 (面を作る番号)
-j=2:接点番号2
-j=3:セル番号1 (面が接してるセル番号)
-j=4:セル番号2
-セル番号が"-1"とかは境界条件
-[1 1 4 -1 1]
+volume, [m3]
+volume[i][j]
+i:x
+j:y
 --------------------------------------------
 
 --------------------------------------------
-vecAx[i][j]
-i:Ax番号
-j=0 : nodes num1 (面を作る点の番号)
-j=1 : nodes num2 (面を作る点の番号)
-j=2 : x vec
-j=3 : y vec
-j=4 : z vec
+base quantity
+Qbase[i][j][l]
+i:x
+j:y
+l=1 :density[kg/m3]
+l=2 :x-directional velocity[m/s]
+l=3 :y-directional velocity[m/s]
+l=4 :pressure[Pa]
+l=5 :mass fraction of N2[-]
+l=6 :mass fraction of N[-]
 --------------------------------------------
 
 --------------------------------------------
-vecAy[i][j]
-i:Ay番号
-j=0 : nodes num1 (面を作る点の番号)
-j=1 : nodes num2 (面を作る点の番号)
-j=2 : x vec
-j=3 : y vec
-j=4 : z vec
+conserved quantity
+Qcon[i][j][l]
+i:x
+j:y
+l=1 :density[kg/m3]
+l=2 :x-directional velocity[m/s]
+l=3 :y-directional velocity[m/s]
+l=4 :pressure[Pa]
+l=5 :density of N2[kg/m3]
+l=6 :density of N[kg/m3]
 --------------------------------------------
 
 --------------------------------------------
-volume[i]
-i:iセルのvolume(二次元なので実質面積)
+conserved quantity in the general coordinate system
+Qcon_hat[i][j][l]
+i:x
+j:y
+l=1 :density[kg/m3] * volume
+l=2 :x-directional velocity[m/s] * volume
+l=3 :y-directional velocity[m/s] * volume
+l=4 :pressure[Pa] * volume
+l=5 :density of N2[kg/m3] * volume
+l=6 :density of N[kg/m3] * volume
 --------------------------------------------
 
 --------------------------------------------
-Qval[i]
-i:iセルのスカラー値
+Gas constant of mixed gas, [J/(kg K)]
+Rhat[i][j]
+i:x
+j:y
 --------------------------------------------
 
 --------------------------------------------
-cell_Enum[i][j]
-i:セル番号
-j=0 : セル番号
-j=1 : ele_bdx番号(=dqdxi,vecAx番号)
-j=2 : ele_bdx番号
+Viscosity coefficient considering chemical species, [Pa s]
+chmu[i][j]
+i:x
+j:y
+J.M. Yos, "Transport properties of nitrogen, hydrogen, oxygen, and air to 30,000 K", 
+AVCO Tech. Mem. RAD-TM-63-7, ASTIA Doc. AD-435-053. (1963).
 --------------------------------------------
 
 --------------------------------------------
-cell_Fnum[i][j]
-i:セル番号
-j=0 : セル番号
-j=1 : ele_bdy番号(=dqdeta,vecAy番号)
-j=2 : ele_bdy番号
+Thermal Conductivity at Translational Temperature, [W/(m K)]
+chlambda_tr[i][j]
+i:x
+j:y
+J.M. Yos, "Transport properties of nitrogen, hydrogen, oxygen, and air to 30,000 K", 
+AVCO Tech. Mem. RAD-TM-63-7, ASTIA Doc. AD-435-053. (1963).
 --------------------------------------------
 
 --------------------------------------------
-dqdxi[i]
-i:ele_bdx番号
+Diffusion coefficient for each chemical species, [m2/K]
+chD[i][j][ns]
+i:x
+j:y
+ns:species
+J.M. Yos, "Transport properties of nitrogen, hydrogen, oxygen, and air to 30,000 K", 
+AVCO Tech. Mem. RAD-TM-63-7, ASTIA Doc. AD-435-053. 1963.
+J. O. Hirschfelder, C. F. Curtiss, and R. B. Bird, Molecular Theory of Gases and
+Liquids, New York, Wiley, 1954.
+C. F. Curtiss and J. O. Hirschfelder, \Transport properties of multicomponent gas
+mixture," The Journal of chemical physics, Vol. 17, No. 6, pp. 550-555, 1949.
 --------------------------------------------
 
 --------------------------------------------
-vecE[i][j]
-i:E番号
-j=0 : nodes num1 (面を作る点の番号)
-j=1 : nodes num2 (面を作る点の番号)
-j=2 : x vec
-j=3 : y vec
-j=4 : z vec
+Mole fractions for each chemical species, [-]
+chmolef[i][j][ns]
+i:x
+j:y
+ns:species
 --------------------------------------------
 
 --------------------------------------------
-bdcon[i][j]
-i:境界条件番号
-j=0:境界条件
-# bd1_con = 境界条件  0 = 等温
-#                    1 = 断熱条件(勾配0)
-#                    2 = 一定熱流束
-# bd1_val = 境界値   0 = 温度[K]
-#                    1 = なし (0)
-#                    2 = 熱流束[W/m^2]
-j=1:値
-[[0.0,293], [1.0,0.0]]
+Production rate,[kg/(s m3)]
+wdot[i][j][ns]
+i:x
+j:y
+ns:species
 --------------------------------------------
 
+--------------------------------------------
+--------------------------------------------
+
+--------------------------------------------
+--------------------------------------------
+
+--------------------------------------------
+--------------------------------------------
+
+--------------------------------------------
+--------------------------------------------
+
+--------------------------------------------
+--------------------------------------------
+
+--------------------------------------------
+--------------------------------------------

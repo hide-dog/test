@@ -5,9 +5,9 @@ function main()
     xnum = 200           #       2:rnum
     ynum = 200           #       2:tnum
     lenx = 1           #       2:inr
-    leny = 10           #       2:outr
-    st_ang  = -0*pi       # 2:angle
-    en_ang  = -2*pi          # 2:angle
+    leny = 3           #       2:outr
+    st_ang  = -1/2*pi       # 2:angle
+    en_ang  = -3/2*pi          # 2:angle
 
     outdir = "grid"
     make_dir(outdir)

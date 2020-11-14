@@ -13,6 +13,119 @@ function set_volume(nodes, cellxmax, cellymax)
     return volume
 end 
 
+
+
+function set_dx_lts(nodes, cellxmax, cellymax)
+    # 境界で定義
+    dx = zeros(cellxmax+1, cellymax)
+    dy = zeros(cellxmax, cellymax+1)
+    
+    for i in 2:cellxmax+1 -1
+        for j in 2:cellymax -1
+            x1 = nodes[i,j,1]
+            y1 = nodes[i,j,2]
+            x2 = nodes[i,j+1,1]
+            y2 = nodes[i,j+1,2]
+
+            a  = (y2-y1) / (x2-x1)
+            b  = y1 - a*x1
+
+            ccx = 0.125 * (nodes[i,j,1] + nodes[i+1,j,1] + nodes[i,j+1,1] + nodes[i+1,j+1,1])
+            ccy = 0.125 * (nodes[i,j,2] + nodes[i+1,j,2] + nodes[i,j+1,2] + nodes[i+1,j+1,2])
+            
+            dx1 = abs(-a*ccx + ccy -b)/abs(a)
+
+            ccx = 0.125 * (nodes[i-1,j,1] + nodes[i,j,1] + nodes[i-1,j+1,1] + nodes[i,j+1,1])
+            ccy = 0.125 * (nodes[i-1,j,2] + nodes[i,j,2] + nodes[i-1,j+1,2] + nodes[i,j+1,2])
+            
+            dx2 = abs(-a*ccx + ccy -b)/abs(a)
+
+            dx[i,j] = 0.5 * (dx1+dx2)
+        end
+    end
+
+    for i in 2:cellxmax -1
+        for j in 2:cellymax+1 -1
+            x1 = nodes[i,j,1]
+            y1 = nodes[i,j,2]
+            x2 = nodes[i+1,j,1]
+            y2 = nodes[i+1,j,2]
+
+            a  = (y2-y1) / (x2-x1)
+            b  = y1 - a*x1
+
+            ccx = 0.125 * (nodes[i,j,1] + nodes[i+1,j,1] + nodes[i,j+1,1] + nodes[i+1,j+1,1])
+            ccy = 0.125 * (nodes[i,j,2] + nodes[i+1,j,2] + nodes[i,j+1,2] + nodes[i+1,j+1,2])
+            
+            dy1 = abs(-a*ccx + ccy -b)/abs(a)
+
+            ccx = 0.125 * (nodes[i,j,1] + nodes[i+1,j,1] + nodes[i,j-1,1] + nodes[i+1,j-1,1])
+            ccy = 0.125 * (nodes[i,j,2] + nodes[i+1,j,2] + nodes[i,j-1,2] + nodes[i+1,j-1,2])
+            
+            dy2 = abs(-a*ccx + ccy -b)/abs(a)
+
+            dy[i,j] = 0.5 * (dy1+dy2)
+        end
+    end
+
+    return dx, dy
+end
+
+function set_lts(Qbase, cellxmax, cellymax, mu, dx, dy, vecAx, vecAy, volume, specific_heat_ratio, cfl)
+    dtau = zeros(cellxmax, cellymax)
+    lambda_facex = zeros(cellxmax+1, cellymax)
+    lambda_facey = zeros(cellxmax, cellymax+1)
+    g = specific_heat_ratio
+
+    for i in 2:cellxmax+1 -1
+        for j in 2:cellymax -1
+
+            rho_av = 0.5 * (Qbase[i,j,1] + Qbase[i-1,j,1])
+            u_av   = 0.5 * (Qbase[i,j,2] + Qbase[i-1,j,2])
+            v_av   = 0.5 * (Qbase[i,j,3] + Qbase[i-1,j,3])
+            mu_av  = 0.5 * (   mu[i,j]   +    mu[i-1,j]  )
+            
+            ap = (g * Qbase[  i,j,4] / Qbase[  i,j,1])^0.5
+            am = (g * Qbase[i-1,j,4] / Qbase[i-1,j,1])^0.5
+            a_av = 0.5 * (ap + am)
+
+            U   = u_av*vecAx[i,j,1] + v_av*vecAx[i,j,2]
+            lambda_facex[i,j] = abs(U) + a_av + 2*mu_av/(rho_av*dx[i,j])
+        end
+    end
+    for i in 2:cellxmax -1
+        for j in 2:cellymax+1 -1
+
+            rho_av = 0.5 * (Qbase[i,j,1] + Qbase[i,j-1,1])
+            u_av   = 0.5 * (Qbase[i,j,2] + Qbase[i,j-1,2])
+            v_av   = 0.5 * (Qbase[i,j,3] + Qbase[i,j-1,3])
+            mu_av  = 0.5 * (   mu[i,j]   +    mu[i,j-1]  )
+            
+            ap = (g * Qbase[  i,j,4] / Qbase[  i,j,1])^0.5
+            am = (g * Qbase[i,j-1,4] / Qbase[i,j-1,1])^0.5
+            a_av = 0.5 * (ap + am)
+
+            V   = u_av*vecAy[i,j,1] + v_av*vecAy[i,j,2]
+            lambda_facey[i,j] = abs(V) + a_av + 2*mu_av/(rho_av*dy[i,j])
+        end
+    end
+
+    for i in 2:cellxmax-1
+        for j in 2:cellymax-1
+            a1 = lambda_facex[  i,  j]
+            a2 = lambda_facex[i+1,  j]
+            a3 = lambda_facey[  i,  j]
+            a4 = lambda_facey[  i,j+1]
+            lmax = maximum([a1,a2,a3,a4])
+
+            dtau[i,j] = cfl * volume[i,j] / lmax
+        end
+    end
+
+    return dtau
+end
+
+
 function set_mu(Qbase,cellxmax,cellymax,specific_heat_ratio,Rd)
     mu = zeros(cellxmax,cellymax)
 
@@ -92,7 +205,7 @@ end
 
 function set_gasconst(Qbase,cellxmax,cellymax,nval,nch,R)
     Rhat = zeros(cellxmax, cellymax)
-    mw   = [28e-3, 14e-3]
+    mw   = set_mw()
     npre = nval - nch
 
     for i in 1:cellxmax

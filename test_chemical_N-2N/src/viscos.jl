@@ -1,4 +1,4 @@
-function central_diff(Qbase, Qcon, cellxmax, cellymax, mu, lambda, chD, chi,
+function central_diff(Qbase, Qcon, cellxmax, cellymax, mu, lambda, chD, chmolef,
                         vecAx, vecAy, specific_heat_ratio, volume, Rhat, nval, nch)
 
     E_vis_hat = zeros(cellxmax+1,   cellymax, nval)
@@ -54,8 +54,8 @@ function central_diff(Qbase, Qcon, cellxmax, cellymax, mu, lambda, chD, chi,
 
             # chemical term
             for s in 1:nch
-                dchidxi[s]  = chi[i,j,s] - chi[i-1,j,s]
-                dchideta[s] = 0.25 * (chi[i,j+1,s] - chi[i,j-1,s] + chi[i-1,j+1,s] - chi[i-1,j-1,s])
+                dchidxi[s]  = chmolef[i,j,s] - chmolef[i-1,j,s]
+                dchideta[s] = 0.25 * (chmolef[i,j+1,s] - chmolef[i,j-1,s] + chmolef[i-1,j+1,s] - chmolef[i-1,j-1,s])
                 chD_av[s]   = 0.5*(chD[i-1,j,s] + chD[i,j,s]) 
             end
             for s in 1:nch
@@ -139,8 +139,8 @@ function central_diff(Qbase, Qcon, cellxmax, cellymax, mu, lambda, chD, chi,
             
             # chemical term
             for s in 1:nch
-                dchidxi[s]  = 0.25 * (chi[i+1,j,s] - chi[i-1,j,s] + chi[i+1,j-1,s] - chi[i-1,j-1,s])
-                dchideta[s] = chi[i,j,s] - chi[i,j-1,s]
+                dchidxi[s]  = 0.25 * (chmolef[i+1,j,s] - chmolef[i-1,j,s] + chmolef[i+1,j-1,s] - chmolef[i-1,j-1,s])
+                dchideta[s] = chmolef[i,j,s] - chmolef[i,j-1,s]
                 chD_av[s]   = 0.5  * (chD[i,j-1,s] + chD[i,j,s]) 
             end
             for s in 1:nch

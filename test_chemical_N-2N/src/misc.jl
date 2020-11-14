@@ -7,7 +7,6 @@ function set_initQbase(xmax, ymax, restart_file, init_rho, init_u, init_v, init_
     restart_check = 0
     try Qbase = setup_restart_value(cellxmax, cellymax, out_dir, restart_file, nch, nval)
         println("Restart "*restart_file)
-        println(Qbase[2,2,:])
         restart_check = 2
     catch 
         restart_check = 1
@@ -32,12 +31,8 @@ function setup_init_value(cellxmax, cellymax, init_rho, init_u, init_v, init_p, 
             Qbase[i,j,2] = init_u
             Qbase[i,j,3] = init_v
             Qbase[i,j,4] = init_p
-            Qbase[i,j,5] = init_rho * init_N2
-            if init_N < 1e-6
-                Qbase[i,j,6] = 0.0
-            else
-                Qbase[i,j,6] = init_rho * init_N
-            end
+            Qbase[i,j,5] = init_N2
+            Qbase[i,j,6] = init_N
         end
     end
     return Qbase
@@ -66,7 +61,7 @@ function setup_restart_value(cellxmax, cellymax, out_dir, restart_file, nch, nva
                 Qbase[i,j,l] = parse(Float64,temp[l])
             end
             for l in 1:nch # mass frac -> rho
-                Qbase[i,j,npre+l] = Qbase[i,j,npre+l] * Qbase[i,j,1]
+                Qbase[i,j,npre+l] = Qbase[i,j,npre+l]
             end
             ite = ite+1
         end

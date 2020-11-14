@@ -13,11 +13,11 @@ function output_result(stepnum, Qbase, cellxmax, cellymax, specific_heat_ratio, 
         for i in 2:cellxmax-1
             for j in 2:cellymax-1
                 for l in 1:nval
-                    a = @sprintf("%8.8e", Qbase[i,j,l])
+                    a = @sprintf("%8.16e", Qbase[i,j,l])
                     write(f, a*" ")
                 end
                 T = Qbase[i,j,4]/(Qbase[i,j,1]*Rhat[i,j])
-                a = @sprintf("%8.8e", T)
+                a = @sprintf("%8.16e", T)
                 write(f, a*"\n")
             end
         end

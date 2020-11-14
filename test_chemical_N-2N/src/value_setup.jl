@@ -13,8 +13,6 @@ function set_volume(nodes, cellxmax, cellymax)
     return volume
 end 
 
-
-
 function set_dx_lts(nodes, cellxmax, cellymax)
     # 境界で定義
     dx = zeros(cellxmax+1, cellymax)
@@ -203,7 +201,7 @@ function set_Minf(bdcon, specific_heat_ratio)
     return M
 end
 
-function set_gasconst(Qbase,cellxmax,cellymax,nval,nch,R)
+function set_gasconst_hat(Qbase,cellxmax,cellymax,nval,nch,R)
     Rhat = zeros(cellxmax, cellymax)
     mw   = set_mw()
     npre = nval - nch

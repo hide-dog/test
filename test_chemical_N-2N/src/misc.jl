@@ -11,12 +11,12 @@ function set_initQbase(xmax, ymax, restart_file, init_rho, init_u, init_v, init_
     catch 
         restart_check = 1
     end
-
+    
     if restart_check == 1
         Qbase = setup_init_value(cellxmax, cellymax, init_rho, init_u, init_v, init_p, init_N2, init_N, nval)
         println("Start Initial condition")
         restart_num = 0
-        Rhat = set_gasconst(Qbase, cellxmax, cellymax, nval, nch, R)
+        Rhat = set_gasconst_hat(Qbase, cellxmax, cellymax, nval, nch, R)
         output_result(0, Qbase, cellxmax, cellymax, specific_heat_ratio, out_file_front, out_ext, out_dir, Rhat, nval)
     end
 
@@ -60,7 +60,7 @@ function setup_restart_value(cellxmax, cellymax, out_dir, restart_file, nch, nva
             for l in 1:nval
                 Qbase[i,j,l] = parse(Float64,temp[l])
             end
-            for l in 1:nch # mass frac -> rho
+            for l in 1:nch # mass frac
                 Qbase[i,j,npre+l] = Qbase[i,j,npre+l]
             end
             ite = ite+1
@@ -89,7 +89,7 @@ function check_divrege(Qbase, cellxmax, cellymax, Rhat, fwrite)
                 end
                 ite = 1
             end            
-            if 1 < Qbase[i,j,5] || Qbase[i,j,5] < 0
+            if 1+1e-3 < Qbase[i,j,5] || Qbase[i,j,5] < -1e-3
                 open( fwrite, "a" ) do f
                     ai = @sprintf("%4.0f", i)
                     aj = @sprintf("%4.0f", j)
@@ -119,5 +119,17 @@ function check_divrege(Qbase, cellxmax, cellymax, Rhat, fwrite)
         println(" chemical diverge ")
         println("\n")
         throw(UndefVarError(:x))
+    end
+end
+
+function check_small(Qbase, cellxmax, cellymax, nch)
+    for i in 1:cellxmax
+        for j in 1:cellymax
+            for ns in 1:nch
+                if Qbase[i,j,4+ns] < 1e-20
+                    Qbase[i,j,4+ns] = 0.0
+                end
+            end
+        end
     end
 end

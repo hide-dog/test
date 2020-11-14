@@ -78,19 +78,7 @@ function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval
                 end
                 set_bdx(Qbase, rho, u, v, p, ch, nch, bdx[dim], j)
             end
-        elseif Int(bdcon[dim][1]) == 21
-            for j in 1:cellymax
-                u   = Qbase[bdx_nei[dim],j,2]
-                v   = Qbase[bdx_nei[dim],j,3]
-                p   = Qbase[bdx_nei[dim],j,4]
-                T   = bdcon[dim][6+nch]
-                rho = p/(Rhat[i,j]*T)
-                for ns in 1:nch
-                    ch[ns] =  Qbase[bdx_nei[dim],j,4+ns]
-                end
-                set_bdx(Qbase, rho, u, v, p, ch, nch, bdx[dim], j)
-            end
-        elseif Int(bdcon[1][1]) == 30
+        elseif Int(bdcon[dim][1]) == 30
             for j in 1:cellymax
                 rho = Qbase[bdx_nei[dim],j,1]
                 u   = -Qbase[bdx_nei[dim],j,2]
@@ -101,7 +89,19 @@ function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval
                 end
                 set_bdx(Qbase, rho, u, v, p, ch, nch, bdx[dim], j)
             end
-        elseif Int(bdcon[1][1]) == 40
+        elseif Int(bdcon[dim][1]) == 31
+            for j in 1:cellymax
+                u   = -Qbase[bdx_nei[dim],j,2]
+                v   = -Qbase[bdx_nei[dim],j,3]
+                p   = Qbase[bdx_nei[dim],j,4]
+                T   = bdcon[dim][6+nch]
+                rho = p/(Rhat[i,j]*T)
+                for ns in 1:nch
+                    ch[ns] =  Qbase[bdx_nei[dim],j,4+ns]
+                end
+                set_bdx(Qbase, rho, u, v, p, ch, nch, bdx[dim], j)
+            end
+        elseif Int(bdcon[dim][1]) == 40
             for j in 1:cellymax
                 rho = Qbase[bdx_nei_rev[dim],j,1]
                 u   = Qbase[bdx_nei_rev[dim],j,2]
@@ -224,19 +224,7 @@ function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval
                 end
                 set_bdy(Qbase, rho, u, v, p, ch, nch, bdy[dim-2],i)
             end
-        elseif Int(bdcon[dim][1]) == 21
-            for i in 1:cellxmax
-                u   = Qbase[i,bdy_nei[dim-2],2]
-                v   = Qbase[i,bdy_nei[dim-2],3]
-                p   = Qbase[i,bdy_nei[dim-2],4]
-                T   = bdcon[dim][6+nch]
-                rho = p/(Rhat[i,j]*T)
-                for ns in 1:nch
-                    ch[ns] =  Qbase[i,bdy_nei[dim-2],4+ns]
-                end
-                set_bdy(Qbase, rho, u, v, p, ch, nch, bdy[dim-2],i)
-            end
-        elseif Int(bdcon[1][1]) == 30
+        elseif Int(bdcon[dim][1]) == 30
             for i in 1:cellxmax
                 rho = Qbase[i,bdy_nei[dim-2],1]
                 u   = -Qbase[i,bdy_nei[dim-2],2]
@@ -247,7 +235,19 @@ function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval
                 end
                 set_bdy(Qbase, rho, u, v, p, ch, nch, bdy[dim-2],i)
             end
-        elseif Int(bdcon[1][1]) == 40
+        elseif Int(bdcon[dim][1]) == 31
+            for i in 1:cellxmax
+                u   = -Qbase[i,bdy_nei[dim-2],2]
+                v   = -Qbase[i,bdy_nei[dim-2],3]
+                p   = Qbase[i,bdy_nei[dim-2],4]
+                T   = bdcon[dim][6+nch]
+                rho = p/(Rhat[i,j]*T)
+                for ns in 1:nch
+                    ch[ns] =  Qbase[i,bdy_nei[dim-2],4+ns]
+                end
+                set_bdy(Qbase, rho, u, v, p, ch, nch, bdy[dim-2],i)
+            end
+        elseif Int(bdcon[dim][1]) == 40
             for i in 1:cellxmax
                 rho = Qbase[i,bdy_nei_rev[dim-2],1]
                 u   = Qbase[i,bdy_nei_rev[dim-2],2]
@@ -265,18 +265,32 @@ function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval
 end
 
 function check_bd(bdcon)
+    bd = -1
     for l in 1:4
         if     Int(bdcon[l][1]) == 00
+            bd = 00
+        elseif Int(bdcon[l][1]) == 01
+            bd = 01
         elseif Int(bdcon[l][1]) == 02
+            bd = 02
+        elseif Int(bdcon[l][1]) == 03
+            bd = 03
 
         elseif Int(bdcon[l][1]) == 20
-        
-        elseif Int(bdcon[l][1]) == 30
+            bd = 20
 
+        elseif Int(bdcon[l][1]) == 30
+            bd = 30
+        elseif Int(bdcon[l][1]) == 31
+            bd = 31
+            
         elseif Int(bdcon[l][1]) == 40
+            bd = 40
         else
             println("\n check boundary condition ! \n")
             throw(UndefVarError(:x))
         end
+        println("bd condition")
+        println(bd)
     end
 end

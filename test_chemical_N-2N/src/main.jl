@@ -43,16 +43,16 @@ function main()
                 
         evalnum = t+restartnum
         if time_integ == "1"
+            Rhat = set_gasconst_hat(Qbase,cellxmax,cellymax,nval,nch,R)
+
             # exlicit scheme
-
-            Rhat = set_gasconst(Qbase,cellxmax,cellymax,nval,nch,R)
-
             Qbase    = set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval, nch)
             Qcon     = base_to_conservative(Qbase, cellxmax, cellymax, specific_heat_ratio, nval, nch)
             Qcon_hat = setup_Qcon_hat(Qcon, cellxmax, cellymax, volume, nval, nch)
-           
-
+            
             # initial_setup
+            # 境界条件分のRhatを定義
+            Rhat = set_gasconst_hat(Qbase,cellxmax,cellymax,nval,nch,R)
             chmu, chlambda_tr, chD, chmolef = chemical_value(Qbase, cellxmax, cellymax, Rhat, nval, nch)
             
             # RHS
@@ -65,7 +65,9 @@ function main()
             
             # viscos_term
             E_vis_hat, F_vis_hat = central_diff(Qbase, Qcon, cellxmax, cellymax, chmu, chlambda_tr, chD, chmolef,
-                                                vecAx, vecAy, specific_heat_ratio, volume, Rhat, nval, nch)
+                                                vecAx, vecAy, specific_heat_ratio, volume, Rhat, nval, nch)                
+            
+            
             
             RHS = setup_RHS(cellxmax, cellymax, E_adv_hat, F_adv_hat, E_vis_hat, F_vis_hat, wdot, nval, volume)
             
@@ -91,6 +93,8 @@ function main()
                 Qcon_hat = setup_Qcon_hat(Qcon, cellxmax, cellymax, volume, nval, nch)
 
                 # initial_setup
+                # 境界条件分のRhatを定義
+                Rhat = set_gasconst_hat(Qbase,cellxmax,cellymax,nval,nch,R)
                 chmu, chlambda_tr, chD, chmolef = chemical_value(Qbasem, cellxmax, cellymax, Rhat, nval, nch)
                 dtau   = set_lts(Qbasem, cellxmax, cellymax, mu, dx, dy, vecAx, vecAy, volume, specific_heat_ratio, cfl)
 
@@ -152,14 +156,16 @@ function main()
             end            
             Qbase = copy(Qbasem)
         end
+
+        check_divrege(Qbase, cellxmax, cellymax, Rhat, fwrite)
+        check_small(Qbase, cellxmax, cellymax, nch)
         
         if round(evalnum) % every_outnum == 0
             println("\n")
             println("nt_______________________________"*string(round(evalnum)))
+            Rhat = set_gasconst_hat(Qbase,cellxmax,cellymax,nval,nch,R)
             output_result(evalnum, Qbase, cellxmax, cellymax, specific_heat_ratio, out_file_front, out_ext, out_dir, Rhat, nval)
         end
-
-        check_divrege(Qbase, cellxmax, cellymax, Rhat, fwrite)
     end
     end_t = now()
     output_fin(fwrite, start_t, end_t, nt, dt, in_nt, cellxmax, cellymax)

@@ -15,9 +15,9 @@
 
 
 "time_integ":"1",      
-"nt":"1.0e2",          
-"dt":"1.0e-6",       
-"every_outnum":"1.0e1",      
+"nt":"2.0e4",          
+"dt":"5.0e-7",       
+"every_outnum":"2.0e3",      
 "inner_step":"10",       
 "dtau":"1.0e-2",       
 

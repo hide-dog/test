@@ -2,9 +2,9 @@
 
 ---------------------------- 
   fin program  
-  number of cell            = 40804
-  dt                        = 1.0e-6
-  number of time iteration  = 100
+  number of cell            = 10404
+  dt                        = 5.0e-7
+  number of time iteration  = 20000
   number of inner iteration = 10
-  elapse time (hh:mm:ss)    = 00:00:38
+  elapse time (hh:mm:ss)    = 00:15:29
 ---------------------------- 

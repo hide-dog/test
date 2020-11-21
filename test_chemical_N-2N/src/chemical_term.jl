@@ -16,7 +16,7 @@ function set_wdot(Qbase, cellxmax, cellymax, Rhat, nch, nre, nval)
             total = 0.0
             rho_mw = zeros(nch)
             for s in 1:nch
-                rho_mw[s] = Qbase[i,j,npre+s] / mw[s]   # [mol/m3] = [kg/m3] / [kg/mol] 
+                rho_mw[s] = Qbase[i,j,npre+s] * Qbase[i,j,1] / mw[s]   # [mol/m3] = [kg/m3] / [kg/mol] 
                 total     = total + rho_mw[s]
             end
             total = log10(total*avgdro)
@@ -64,6 +64,151 @@ function set_wdot(Qbase, cellxmax, cellymax, Rhat, nch, nre, nval)
         end
     end
     return wdot
+end
+
+function set_wdot_for_implicit(Qbase, cellxmax, cellymax, Rhat, nch, nre, nval, volume)
+    
+    wdot  = zeros(cellxmax, cellymax, nval)
+    H_hat = zeros(cellxmax, cellymax, nval, nval) # source term for point implicit
+    npre = nval - nch
+    epsion = zeros(nval)
+    for s in 1:nch
+        epsion[npre+s] = 1.0
+    end
+
+    mw = set_mw()
+    avgdro  = set_avgdro_const()
+    rhos_inv = ones(nval)
+    R   = set_gas_const()
+    Rs  = zeros(nch)
+    for s in 1:nch
+        Rs[s] = R/mw[s]
+    end
+    
+    fmol = set_fmol()
+    bmol = set_bmol()
+
+    for i in 2:cellxmax-1
+        for j in 2:cellymax-1
+        
+            # Initial setting
+            total = 0.0
+            rho_mw = zeros(nch)
+            for s in 1:nch
+                rho_mw[s] = Qbase[i,j,npre+s] * Qbase[i,j,1] / mw[s]   # [mol/m3] = [kg/m3] / [kg/mol] 
+                total     = total + rho_mw[s]
+            end
+            total = log10(total*avgdro)
+
+            if total <= 20.0
+                nsb = 1
+            elseif total <= 21.0
+                nsb = 2
+            elseif total <= 22.0
+                nsb = 3
+            elseif total <= 23.0
+                nsb = 4
+            elseif total <= 24.0
+                nsb = 5
+            else
+                nsb = 6
+            end
+            
+            T   = Qbase[i,j,npre]/(Qbase[i,j,1]*Rhat[i,j])
+            
+            keq = k_eq(T, nsb, nre)
+            kf  = freaction_rate(T, nre)
+            kb  = breaction_rate(kf, keq, nre)
+
+            # Forward and backward rate for reaction ir
+            lf = ones(nre)
+            lb = ones(nre)
+            for r in 1:nre
+                for s in 1:nch
+                    lf[r] = lf[r]*1.0e-6*rho_mw[s]^fmol[r][s]
+                    lb[r] = lb[r]*1.0e-6*rho_mw[s]^bmol[r][s]
+                end
+                lf[r] = lf[r]*kf[r]
+                lb[r] = lb[r]*kb[r]
+            end
+
+            for s in 1:nch
+                wdot[i,j,npre+s] = 0.0
+                for r in 1:nre
+                    temp = (bmol[r][s] - fmol[r][s])*(lf[r] - lb[r])
+                    wdot[i,j,npre+s] += temp 
+                end
+                wdot[i,j,npre+s] = 1.0e6 * wdot[i,j,npre+s] * mw[s]
+            end
+
+            for s in 1:nch
+                if Qbase[i,j,4+s] < 1e-20
+                    rhos_inv[4+s] = 0.0
+                else
+                    rhos_inv[4+s] = Qbase[i,j,1] * Qbase[i,j,4+s]
+                end
+            end
+
+            pTpq = pT_pq(Qbase[i,j,:], T, Rs, nval, nch)
+            AZ   = set_AZ(T, nsb)
+            sr   = set_sr()
+            tr   = set_tr()
+            
+            for s in 1:nch
+                for l in 1:nval
+                    pwpq = 0.0
+                    for r in 1:nre
+                        tempf = epsion[s]*fmol[r][s]*rhos_inv[s] + (sr[r]*T-tr[r])/T^2 * pTpq[s]
+                        tempb = epsion[s]*bmol[r][s]*rhos_inv[s] + ((sr[r]*T-tr[r])/T^2 - AZ/T) * pTpq[s]
+                        temp  = (bmol[r][s] - fmol[r][s])*(tempf*lf[r] - tempb*lb[r])
+                        pwpq += temp
+                    end
+                    pwpq = 1.0e6 * wdot[i,j,npre+s] * mw[s]
+                    #H_hat[i,j,4+s,l] = pwpq / volume[i,j]
+                    H_hat[i,j,4+s,l] = pwpq
+                end
+            end
+        end
+    end
+    
+    return wdot, H_hat
+end
+
+function pT_pq(Qbase_cell, T, Rs, nval, nch)
+    pTpq = zeros(nval)
+
+    rhos = zeros(nch)
+    rho = Qbase_cell[1]
+    u   = Qbase_cell[2]
+    v   = Qbase_cell[3]
+    for s in 1:nch
+        rhos[s] = Qbase_cell[4+s]*rho
+    end
+
+    q2         = u^2 + v^2
+    delta_hs_0 = set_delta_hs_0()
+    Cvhat      = 0.0
+    for s in 1:nch
+        Cvhat += 1.5*rhos[s]*Rs[s]/rho
+    end
+
+    pTpq[1] = 0.5 * q2 / (rho*Cvhat)
+    pTpq[2] = -u / (rho*Cvhat)
+    pTpq[3] = -v / (rho*Cvhat)
+    pTpq[4] =  1 / (rho*Cvhat)
+    for s in 1:nch
+        pTpq[4+s] = -(delta_hs_0[s] + T*1.5*Rs[s]) / (rho*Cvhat)
+    end
+
+    return pTpq
+end
+
+function set_AZ(T, nsb)
+    ar1, ar2, ar3, ar4, ar5 = set_ar()
+    Z  = 10^4/T
+
+    AZ = ar1[nsb]/Z - ar3[nsb] - ar4[nsb]*Z - 2*ar5[nsb]*Z^2
+    return AZ
 end
 
 function chemical_value(Qbase, cellxmax, cellymax, Rhat, nval, nch)

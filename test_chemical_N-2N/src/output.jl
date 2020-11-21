@@ -30,9 +30,9 @@ function reset_write(fwrite)
     end
 end
 
-function output_physicaltime(fwrite, t, dt)
-    a = string(t)
-    b = @sprintf("%8.8f", t*dt)
+function output_physicaltime(fwrite, t, dt, init_step, init_time)
+    a = string(t + init_step)
+    b = @sprintf("%8.8f", (t+init_step) * dt)
     open(fwrite, "a") do f
         write(f, "\n")
         write(f, "step = "*a)

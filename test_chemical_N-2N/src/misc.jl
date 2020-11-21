@@ -1,13 +1,19 @@
-function set_initQbase(xmax, ymax, restart_file, init_rho, init_u, init_v, init_p, init_N2, init_N, 
+using Printf
+function set_initQbase(xmax, ymax, restart_file, init_rho, init_u, init_v, init_p, init_N2, init_N, dt, 
                         specific_heat_ratio, out_file_front, out_ext, out_dir, restart_num, R, nch, nval)
     Qbase=[]
     cellxmax = xmax - 1
     cellymax = ymax - 1
 
+    init_step = 0
+    init_time = 0.0
+
     restart_check = 0
     try Qbase = setup_restart_value(cellxmax, cellymax, out_dir, restart_file, nch, nval)
         println("Restart "*restart_file)
         restart_check = 2
+        init_step = restart_num
+        init_time = init_step*dt
     catch 
         restart_check = 1
     end
@@ -20,7 +26,7 @@ function set_initQbase(xmax, ymax, restart_file, init_rho, init_u, init_v, init_
         output_result(0, Qbase, cellxmax, cellymax, specific_heat_ratio, out_file_front, out_ext, out_dir, Rhat, nval)
     end
 
-    return Qbase, cellxmax, cellymax, restart_num
+    return Qbase, cellxmax, cellymax, restart_num, init_step, init_time
 end
 
 function setup_init_value(cellxmax, cellymax, init_rho, init_u, init_v, init_p, init_N2, init_N, nval)
@@ -132,4 +138,29 @@ function check_small(Qbase, cellxmax, cellymax, nch)
             end
         end
     end
+end
+
+function GE(matrix, nval)
+    # nval * nval 行列の逆行列を求める。
+
+    for l in 1:nval
+        a = 1.0/matrix[l,l]
+        matrix[l,l] = 1.0
+
+        for m in 1:nval
+            matrix[l,m] = matrix[l,m]*a
+        end
+
+        for m in 1:nval
+            if m == l
+            else
+                b = matrix[m,l]
+                matrix[m,l] = 0.0
+                for n in 1:nval
+                    matrix[m,n] = matrix[m,n] - b*matrix[l,n]
+                end
+            end
+        end
+    end
+    return matrix
 end

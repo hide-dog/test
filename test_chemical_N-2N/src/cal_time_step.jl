@@ -19,7 +19,7 @@ function one_wave(Qbase, Qcon, cellxmax, cellymax, vecAx, vecAy, specific_heat_r
     B_beta_shig = zeros(cellxmax, cellymax)
     beta = 1.1
 
-    delta_hs_0 = [0.0, 3.364e7]  # N2,N[J/kg]
+    delta_hs_0 = set_delta_hs_0()  # N2,N[J/kg]
 
     rhos = zeros(nch)
     npre = nval - nch
@@ -249,3 +249,95 @@ function lusgs(dt,Qcon_hat,Qconn_hat,delta_Q,A_adv_hat_p, A_adv_hat_m, B_adv_hat
     return delta_Q
 end
 
+function lusgs_point(dt, dtau, Qcon_hat, Qconn_hat, delta_Q, A_adv_hat_p, A_adv_hat_m, B_adv_hat_p, B_adv_hat_m,
+                    A_beta_shig, B_beta_shig, jalphaP, jbetaP, H_hat, RHS, cellxmax, cellymax, volume, nval)
+    
+    D = zeros(cellxmax,cellymax)
+    Lx = zeros(cellxmax,cellymax,nval,nval)
+    Ly = zeros(cellxmax,cellymax,nval,nval)
+    Ux = zeros(cellxmax,cellymax,nval,nval)
+    Uy = zeros(cellxmax,cellymax,nval,nval)
+
+    I = zeros(nval,nval)
+    for i in 1:nval
+        I[i,i] = 1.0
+    end
+
+    # L,U
+    for i in 1:cellxmax
+        for j in 1:cellymax
+            for l in 1:nval
+                for m in 1:nval
+                    Lx[i,j,l,m] = dt*(A_adv_hat_p[i,j,l,m] + jalphaP[i,j]*I[l,m])
+                    Ly[i,j,l,m] = dt*(B_adv_hat_p[i,j,l,m] + jbetaP[i,j]*I[l,m])
+                    Ux[i,j,l,m] = dt*(A_adv_hat_m[i,j,l,m] - jalphaP[i,j]*I[l,m])
+                    Uy[i,j,l,m] = dt*(B_adv_hat_m[i,j,l,m] - jbetaP[i,j]*I[l,m])
+                end
+            end
+        end
+    end
+
+    LdQ = zeros(cellxmax,cellymax,nval)
+    UdQ = zeros(cellxmax,cellymax,nval)
+    for i in 2:cellxmax-1
+        for j in 2:cellymax-1
+            for l in 1:nval
+                for m in 1:nval
+                    LdQ[i,j,l] += Lx[i-1,j,l,m]*delta_Q[i-1,j,m] + Ly[i,j-1,l,m]*delta_Q[i,j-1,m]
+                    UdQ[i,j,l] += Ux[i+1,j,l,m]*delta_Q[i+1,j,m] + Uy[i,j+1,l,m]*delta_Q[i,j+1,m]
+                end
+            end
+        end
+    end
+
+    # diagonal
+    for i in 2:cellxmax-1
+        for j in 2:cellymax-1
+            D[i,j] = dt/dtau[i,j] + dt*(A_beta_shig[i,j]+2*jalphaP[i,j] + B_beta_shig[i,j]+2*jbetaP[i,j])
+        end
+    end
+
+    source_temp = zeros(nval, nval)
+    RHS_temp = zeros(nval)
+    RHS_H    = zeros(cellxmax, cellymax, nval)
+    # RHS
+    for i in 2:cellxmax-1
+        for j in 2:cellymax-1
+            for l in 1:nval
+                for m in 1:nval
+                    source_temp[l,m] = I[l,m]*dt/dtau[i,j] - dt * H_hat[i,j,l,m]
+                end
+            end
+            inv_source = GE(source_temp, nval)
+        
+            for l in 1:nval
+                RHS_temp[l] = - (Qcon_hat[i,j,l]-Qconn_hat[i,j,l])*1.0 + dt*RHS[i,j,l]
+            end
+            for l in 1:nval
+                for m in 1:nval
+                    RHS_H[i,j,l] += inv_source[l,m] * RHS_temp[m]
+                end
+            end
+        end
+    end
+
+    # lower sweep
+    for i in 2:cellxmax-1
+        for j in 2:cellymax-1
+            for l in 1:nval
+                delta_Q[i,j,l] = D[i,j]^(-1) * (RHS_H[i,j,l]+LdQ[i,j,l])
+            end
+        end
+    end             
+
+    # upepr sweep
+    for i in 2:cellxmax-1
+        for j in 2:cellymax-1
+            for l in 1:nval
+                delta_Q[i,j,l] = delta_Q[i,j,l] - D[i,j]^(-1) * UdQ[i,j,l]
+            end
+        end
+    end
+    
+    return delta_Q
+end

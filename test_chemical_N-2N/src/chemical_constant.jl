@@ -92,17 +92,39 @@ end
 function freaction_rate(Tfr, nreaction)
     kf = zeros(nreaction)
 
-    # N2+N2 -> 2N+N2
-    # N2+N  -> 2N+N
-    Cr = [7.0*10^(21), 3.0*10^(22)]
-    sr = [-1.60, -1.60]
-    tr = [113200, 113200]
+    Cr = set_Cr()
+    sr = set_sr()
+    tr = set_tr()
 
     for r in 1:nreaction
         kf[r] = reaction_rate_arrhcnius(Tfr, Cr[r], sr[r], tr[r])
     end
 
     return kf
+end
+
+function set_Cr()
+    # N2+N2 -> 2N+N2
+    # N2+N  -> 2N+N
+    
+    Cr = [7.0*10^(21), 3.0*10^(22)]
+    return Cr
+end
+
+function set_sr()
+    # N2+N2 -> 2N+N2
+    # N2+N  -> 2N+N
+    
+    sr = [-1.60, -1.60]
+    return sr
+end
+
+function set_tr()
+    # N2+N2 -> 2N+N2
+    # N2+N  -> 2N+N
+    
+    tr = [113200, 113200]
+    return tr
 end
 
 function reaction_rate_arrhcnius(Tfr, Cr, sr, tr)
@@ -113,6 +135,18 @@ end
 function k_eq(T, nsb, nreaction)
     keq = zeros(nreaction)
     
+    ar1, ar2, ar3, ar4, ar5 = set_ar()
+
+    keq[1] = keq_curve_fitting(T, ar1[nsb], ar2[nsb], ar3[nsb], ar4[nsb], ar5[nsb])
+
+    # N2+N  -> 2N+N
+    # 上式と一緒
+    keq[2] = keq_curve_fitting(T, ar1[nsb], ar2[nsb], ar3[nsb], ar4[nsb], ar5[nsb])
+        
+    return keq
+end
+
+function set_ar()
     # Equilibrium constants curve-fits 
     # C. Park, “Nonequilibrium Hypersonic Aerothermodynamics”, Wiley, New York, 1990.
 
@@ -151,16 +185,8 @@ function k_eq(T, nsb, nreaction)
             -6.980000,
             -9.444000,
             -9.444000]
-
-
-    keq[1] = keq_curve_fitting(T, ar1[nsb], ar2[nsb], ar3[nsb], ar4[nsb], ar5[nsb])
-
-    # N2+N  -> 2N+N
-    # 上式と一緒
     
-    keq[2] = keq_curve_fitting(T, ar1[nsb], ar2[nsb], ar3[nsb], ar4[nsb], ar5[nsb])
-        
-    return keq
+    return ar1, ar2, ar3, ar4, ar5
 end
 
 function keq_curve_fitting(T, A1, A2, A3, A4, A5)

@@ -61,7 +61,7 @@ function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval
                 u   = bdcon[dim][3]
                 v   = bdcon[dim][4]
                 T   = bdcon[dim][6+nch]
-                p   = rho*Rhat[i,j]*T
+                p   = rho*Rhat[bdx_nei[dim],j]*T
                 for ns in 1:nch
                     ch[ns] =  bdcon[dim][5+ns]
                 end
@@ -95,7 +95,7 @@ function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval
                 v   = -Qbase[bdx_nei[dim],j,3]
                 p   = Qbase[bdx_nei[dim],j,4]
                 T   = bdcon[dim][6+nch]
-                rho = p/(Rhat[i,j]*T)
+                rho = p/(Rhat[bdx_nei[dim],j]*T)
                 for ns in 1:nch
                     ch[ns] =  Qbase[bdx_nei[dim],j,4+ns]
                 end
@@ -140,7 +140,7 @@ function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval
                 u   = bdcon[dim][3]
                 v   = bdcon[dim][4]
                 T   = bdcon[dim][6+nch]
-                p   = rho*Rhat[i,j]*T
+                p   = rho*Rhat[i,bdy_nei[dim-2]]*T
                 for ns in 1:nch
                     ch[ns] =  bdcon[dim][5+ns]
                 end
@@ -197,7 +197,7 @@ function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval
                 u   = bdcon[dim][3]
                 v   = bdcon[dim][4]
                 T   = bdcon[dim][6+nch]
-                p   = rho*Rhat[i,j]*T
+                p   = rho*Rhat[i,bdy_nei[dim-2]]*T
                 for ns in 1:nch
                     ch[ns] =  bdcon[dim][5+ns]
                 end
@@ -241,7 +241,7 @@ function set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval
                 v   = -Qbase[i,bdy_nei[dim-2],3]
                 p   = Qbase[i,bdy_nei[dim-2],4]
                 T   = bdcon[dim][6+nch]
-                rho = p/(Rhat[i,j]*T)
+                rho = p/(Rhat[i,bdy_nei[dim-2]]*T)
                 for ns in 1:nch
                     ch[ns] =  Qbase[i,bdy_nei[dim-2],4+ns]
                 end

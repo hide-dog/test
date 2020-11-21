@@ -16,11 +16,12 @@ function main()
 
     xmax, ymax, nodes, vecAx, vecAy = read_allgrid()
     out_file_front, out_ext, restartnum, restart_file, init_small, norm_ok,
-    time_integ, nt, dt, every_outnum, in_nt, dtau,
+    time_integ, nt, dt, every_outnum, in_nt, dtau, cfl,
     init_rho, init_u, init_v, init_p, init_N2, init_N, specific_heat_ratio, Rd, bdcon = input_para(PARAMDAT)
 
-    Qbase, cellxmax, cellymax, restartnum = set_initQbase(xmax, ymax, restart_file, init_rho, init_u, init_v, init_p, init_N2, init_N, 
-                                                        specific_heat_ratio, out_file_front, out_ext, out_dir, restartnum, R, nch, nval)
+    Qbase, cellxmax, cellymax, restartnum, init_step, init_time = 
+        set_initQbase(xmax, ymax, restart_file, init_rho, init_u, init_v, init_p, init_N2, init_N, dt,
+        specific_heat_ratio, out_file_front, out_ext, out_dir, restartnum, R, nch, nval)
 
     # init Delta_Qcon_hat
     volume = set_volume(nodes, cellxmax, cellymax)
@@ -36,6 +37,7 @@ function main()
     check_bd(bdcon)
     
     #throw(UndefVarError(:x))
+
     # main loop
     prog = Progress(nt,1)
     for t in 1:nt
@@ -56,7 +58,7 @@ function main()
             chmu, chlambda_tr, chD, chmolef = chemical_value(Qbase, cellxmax, cellymax, Rhat, nval, nch)
             
             # RHS
-            # sorce term
+            # source term
             wdot = set_wdot(Qbase, cellxmax, cellymax, Rhat, nch, nre, nval)
             
             # advection_term           
@@ -71,13 +73,22 @@ function main()
             
             RHS = setup_RHS(cellxmax, cellymax, E_adv_hat, F_adv_hat, E_vis_hat, F_vis_hat, wdot, nval, volume)
             
+            println(wdot[50,10,:])
+
             # time integral
             Qcon_hat = time_integration_explicit(dt, Qcon_hat, RHS, cellxmax, cellymax, nval)
 
             Qcon  = Qhat_to_Q(Qcon_hat, cellxmax, cellymax, volume, nval, nch)
+
+            println(Qbase[50,10,:])
             Qbase = conservative_to_base(Qcon, cellxmax, cellymax, specific_heat_ratio, nval, nch)
+            println(Qbase[50,10,:])
 
         elseif time_integ == "2"
+
+            Rhat  = set_gasconst_hat(Qbase,cellxmax,cellymax,nval,nch,R)
+            Qbase = set_boundary(Qbase, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval, nch)
+
             # Qcn
             Qbasen    = copy(Qbase)
             Qconn     = base_to_conservative(Qbasen, cellxmax, cellymax, specific_heat_ratio, nval, nch)
@@ -86,7 +97,7 @@ function main()
 
             for tau in 1:in_nt
                 # LHS (A_adv_hat=jacobian)
-                Rhat = set_gasconst(Qbasem,cellxmax,cellymax,nval,nch,R)
+                Rhat = set_gasconst_hat(Qbasem, cellxmax, cellymax, nval, nch, R)
 
                 Qbasem   = set_boundary(Qbasem, cellxmax, cellymax, vecAx, vecAy, bdcon, Rhat, nval, nch)
                 Qcon     = base_to_conservative(Qbasem, cellxmax, cellymax, specific_heat_ratio, nval, nch)
@@ -94,13 +105,14 @@ function main()
 
                 # initial_setup
                 # 境界条件分のRhatを定義
-                Rhat = set_gasconst_hat(Qbase,cellxmax,cellymax,nval,nch,R)
+                Rhat = set_gasconst_hat(Qbasem, cellxmax, cellymax, nval, nch, R)
                 chmu, chlambda_tr, chD, chmolef = chemical_value(Qbasem, cellxmax, cellymax, Rhat, nval, nch)
-                dtau   = set_lts(Qbasem, cellxmax, cellymax, mu, dx, dy, vecAx, vecAy, volume, specific_heat_ratio, cfl)
+                dtau   = set_lts(Qbasem, cellxmax, cellymax, chmu, dx, dy, vecAx, vecAy, volume, specific_heat_ratio, cfl)
 
                 # RHS
                 # sorce term
-                wdot = set_wdot(Qbasem, cellxmax, cellymax, Rhat, nch, nre, nval)
+                wdot, H_hat = set_wdot_for_implicit(Qbasem, cellxmax, cellymax, Rhat, nch, nre, nval, volume)
+                println(wdot[50,10,:])
 
                 # advection_term
                 #E_adv_hat, F_adv_hat = AUSM_plusup(Qbasem, Qcon, cellxmax, cellymax, vecAx, vecAy, specific_heat_ratio, Minf, volume, nval, nch)
@@ -114,7 +126,7 @@ function main()
 
                 # lusgs_advection_term
                 A_adv_hat_p, A_adv_hat_m, B_adv_hat_p, B_adv_hat_m, A_beta_shig, B_beta_shig = 
-                    one_wave(Qbasem, Qcon, cellxmax, cellymax, vecAx, vecAy, specific_heat_ratio, volume)
+                    one_wave(Qbasem, Qcon, cellxmax, cellymax, vecAx, vecAy, specific_heat_ratio, volume, nval, nch)
                 # lusgs_viscos_term
                 jalphaP, jbetaP = 
                     central_diff_jacobian(Qbasem, Qcon, cellxmax, cellymax, chmu, chlambda_tr, vecAx, vecAy, specific_heat_ratio, volume)
@@ -126,10 +138,13 @@ function main()
                 norm2 = zeros(nval)
                 while true
                     delta_Q_temp = copy(delta_Q)
-                    delta_Q = lusgs(dt,Qcon_hat,Qconn_hat,delta_Q,A_adv_hat_p, A_adv_hat_m, B_adv_hat_p, B_adv_hat_m, A_beta_shig, B_beta_shig,jalphaP, jbetaP,RHS,cellxmax,cellymax,volume)
+                    delta_Q      = lusgs_point(dt, dtau, Qcon_hat, Qconn_hat, delta_Q, 
+                                                A_adv_hat_p, A_adv_hat_m, B_adv_hat_p, B_adv_hat_m,
+                                                A_beta_shig, B_beta_shig, jalphaP, jbetaP, 
+                                                H_hat, RHS, cellxmax, cellymax, volume, nval)
                     
-                    res   = set_res(delta_Q, delta_Q_temp, cellxmax, cellymax)
-                    norm2 = check_converge(res, RHS, cellxmax, cellymax, init_small)
+                    res   = set_res(delta_Q, delta_Q_temp, cellxmax, cellymax, nval)
+                    norm2 = check_converge(res, RHS, cellxmax, cellymax, init_small, nval)
 
                     ite += 1
                     if norm2[1] < norm_ok && norm2[2] < norm_ok && norm2[3] < norm_ok && norm2[4] < norm_ok
@@ -141,7 +156,9 @@ function main()
                     end
                 end
                 output_innertime(fwrite, tau, norm2, nval)
-                
+
+                #println(delta_Q[50,10,:])
+
                 for i in 2:cellxmax-1
                     for j in 2:cellymax-1
                         for l in 1:nval
@@ -149,13 +166,17 @@ function main()
                         end
                     end
                 end
-
+                
                 Qcon   = Qhat_to_Q(Qcon_hat, cellxmax, cellymax, volume, nval, nch)
                 Qbasem = conservative_to_base(Qcon, cellxmax, cellymax, specific_heat_ratio, nval, nch)
-    
-            end            
+            end
+            println(Qbase[50,10,:])
             Qbase = copy(Qbasem)
+            println(Qbase[50,10,:])
         end
+        #throw(UndefVarError(:x))
+        
+        output_physicaltime(fwrite, t, dt, init_step, init_time)
 
         check_divrege(Qbase, cellxmax, cellymax, Rhat, fwrite)
         check_small(Qbase, cellxmax, cellymax, nch)
